@@ -13,7 +13,7 @@ run_worker_first = ["/api/*"]
 [[d1_databases]]
 binding = "DB"
 database_name = "alnavarroces-portal-db"
-database_id = "REPLACE_WITH_D1_DATABASE_ID"
+database_id = "addc4b11-b71e-4e58-b0ca-3cbb51868a97"
 migrations_dir = "migrations"
 
 [observability]
