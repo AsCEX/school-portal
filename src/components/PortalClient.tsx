@@ -420,7 +420,7 @@ export function PortalClient() {
           <div className="api-status-banner" role="alert">
             <div className="container api-status-inner">
               <span>
-                <strong>Portal API unreachable:</strong> {apiError}. Run the local Cloudflare Worker with{" "}
+                <strong>Portal API unreachable:</strong> {apiError}. Ensure your Cloudflare Pages D1 binding (<code>DB</code>) is configured or run locally with{" "}
                 <code>npm run cf:dev</code>.
               </span>
               <button

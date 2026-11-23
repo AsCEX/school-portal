@@ -9,8 +9,8 @@
     "lint": "eslint",
     "db:migrate:local": "npx wrangler d1 migrations apply alnavarroces-portal-db --local",
     "db:migrate:remote": "npx wrangler d1 migrations apply alnavarroces-portal-db --remote",
-    "cf:dev": "npx wrangler dev",
-    "cf:deploy": "npm run build && npx wrangler deploy"
+    "cf:dev": "npx wrangler pages dev out",
+    "cf:deploy": "npm run build && npx wrangler pages deploy out"
   },
   "dependencies": {
     "next": "16.4.6",
