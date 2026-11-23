@@ -11,9 +11,11 @@ import {
   clearAuthSession,
   fetchCurrentUser,
   fetchPortalOverview,
+  getActiveAdminSchoolSlug,
   getStoredToken,
   loginUser,
   logoutUser,
+  setActiveAdminSchoolSlug,
 } from "@/lib/api";
 import type { AuthUser, PortalOverview } from "@/types/portal";
 
@@ -25,10 +27,12 @@ interface AdminContextValue {
   user: AuthUser | null;
   authChecked: boolean;
   portal: PortalOverview | null;
+  activeSchoolSlug: string | null;
+  selectSchool: (slug: string) => Promise<void>;
   loadingData: boolean;
   statusMessage: string | null;
   setStatusMessage: (msg: string | null) => void;
-  refreshData: () => Promise<void>;
+  refreshData: (slugOverride?: string | null) => Promise<void>;
   signInAdmin: (email: string, password: string) => Promise<AuthUser>;
   signOutAdmin: () => Promise<void>;
   theme: AdminTheme;
@@ -41,6 +45,9 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
   const [portal, setPortal] = useState<PortalOverview | null>(null);
+  const [activeSchoolSlug, setActiveSchoolSlugState] = useState<string | null>(
+    null
+  );
   const [loadingData, setLoadingData] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [theme, setTheme] = useState<AdminTheme>("dark");
@@ -50,6 +57,10 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       const saved = localStorage.getItem(ADMIN_THEME_KEY);
       if (saved === "light" || saved === "dark") {
         setTheme(saved);
+      }
+      const savedSlug = getActiveAdminSchoolSlug();
+      if (savedSlug) {
+        setActiveSchoolSlugState(savedSlug);
       }
     } catch {
       // ignore storage errors
@@ -68,11 +79,15 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
-  const refreshData = useCallback(async () => {
+  const refreshData = useCallback(async (slugOverride?: string | null) => {
     setLoadingData(true);
+    const targetSlug =
+      slugOverride !== undefined ? slugOverride : getActiveAdminSchoolSlug();
     try {
-      const data = await fetchPortalOverview();
+      const data = await fetchPortalOverview(targetSlug, "admin");
       setPortal(data);
+      setActiveSchoolSlugState(data.school.slug);
+      setActiveAdminSchoolSlug(data.school.slug);
     } catch (err) {
       setStatusMessage(
         err instanceof Error
@@ -83,6 +98,15 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       setLoadingData(false);
     }
   }, []);
+
+  const selectSchool = useCallback(
+    async (slug: string) => {
+      setActiveSchoolSlugState(slug);
+      setActiveAdminSchoolSlug(slug);
+      await refreshData(slug);
+    },
+    [refreshData]
+  );
 
   useEffect(() => {
     const token = getStoredToken("admin");
@@ -136,6 +160,8 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
         user,
         authChecked,
         portal,
+        activeSchoolSlug,
+        selectSchool,
         loadingData,
         statusMessage,
         setStatusMessage,

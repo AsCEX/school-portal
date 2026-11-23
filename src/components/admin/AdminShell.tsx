@@ -8,6 +8,7 @@ import { useAdmin } from "./AdminContext";
 
 const PAGE_TITLES: Record<string, string> = {
   "/admin": "Dashboard Overview",
+  "/admin/schools": "Schools & Profiles",
   "/admin/announcements": "Announcements",
   "/admin/events": "Upcoming Events",
   "/admin/statistics": "School Statistics",
@@ -25,6 +26,8 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     user,
     authChecked,
     portal,
+    activeSchoolSlug,
+    selectSchool,
     loadingData,
     statusMessage,
     setStatusMessage,
@@ -98,11 +101,35 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               <SchoolCrest inverted />
             </span>
             <span className="brand-text">
-              <span className="brand-name">ALNAVARROCES</span>
+              <span className="brand-name">
+                {portal?.school.short_name || "ALNAVARROCES"}
+              </span>
               <span className="brand-sub">Admin Console</span>
             </span>
           </Link>
         </div>
+
+        {(portal?.schools?.length ?? 0) > 0 && (
+          <div className="admin-school-switcher">
+            <label htmlFor="admin-school-select" className="admin-nav-label">
+              Active School
+            </label>
+            <select
+              id="admin-school-select"
+              className="admin-school-select"
+              value={activeSchoolSlug || portal?.school.slug || ""}
+              onChange={(e) => selectSchool(e.target.value)}
+              disabled={loadingData}
+            >
+              {(portal?.schools ?? []).map((s) => (
+                <option key={s.id} value={s.slug}>
+                  {s.short_name}
+                  {s.is_default ? " (Default)" : ""}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         <nav className="admin-nav" aria-label="Admin Sidebar Navigation">
           <span className="admin-nav-label">Main Menu</span>
@@ -119,6 +146,29 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               <rect x="11.5" y="11.5" width="6" height="6" rx="1.5" stroke="currentColor" strokeWidth="1.6" />
             </svg>
             <span>Dashboard</span>
+          </Link>
+
+          <Link
+            href="/admin/schools"
+            aria-current={pathname === "/admin/schools" ? "page" : undefined}
+            className={`admin-nav-item ${pathname === "/admin/schools" ? "active" : ""}`}
+          >
+            <svg className="admin-nav-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+              <path
+                d="M10 3L2.5 7L10 11L17.5 7L10 3Z"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M4.5 8.8V14.5C4.5 15.3 7 16.5 10 16.5C13 16.5 15.5 15.3 15.5 14.5V8.8"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+              />
+            </svg>
+            <span>Schools &amp; Profiles</span>
+            <span className="admin-nav-badge">{portal?.schools?.length ?? 1}</span>
           </Link>
 
           <span className="admin-nav-label" style={{ marginTop: 10 }}>
@@ -182,7 +232,11 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
         <div className="admin-sidebar-footer">
           <a
-            href="/"
+            href={
+              portal?.school && !portal.school.is_default
+                ? `/?school=${encodeURIComponent(portal.school.slug)}`
+                : "/"
+            }
             target="_blank"
             rel="noopener noreferrer"
             className="admin-portal-link"
@@ -222,7 +276,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             </button>
             <div>
               <div className="admin-breadcrumb">
-                ALNAVARROCES Admin / <span>{pageTitle}</span>
+                {portal?.school.short_name || "ALNAVARROCES"} Admin / <span>{pageTitle}</span>
               </div>
               <h1 className="admin-page-title">{pageTitle}</h1>
             </div>
@@ -264,7 +318,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             <button
               type="button"
               className="btn btn-outline btn-sm"
-              onClick={refreshData}
+              onClick={() => refreshData()}
               disabled={loadingData}
             >
               {loadingData ? "Refreshing…" : "Refresh Data"}

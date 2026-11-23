@@ -63,7 +63,7 @@ export default function AdminDashboardOverviewPage() {
           <div className="table-filters">
             <GridViewBadge label="Recent Announcements" />
             <span className="table-panel-sub">
-              Latest bulletins published on the ALNAVARROCES public portal
+              Latest bulletins published on the {portal?.school.short_name || "school"} public portal
             </span>
           </div>
           <Link href="/admin/announcements" className="btn btn-primary btn-xs">
@@ -123,7 +123,7 @@ export default function AdminDashboardOverviewPage() {
           <div className="table-filters">
             <GridViewBadge label="Employee Directory" />
             <span className="table-panel-sub">
-              Active Teaching &amp; Non-Teaching profiles synced with MySQL
+              Active Teaching &amp; Non-Teaching profiles synced with Cloudflare D1 (SQLite)
             </span>
           </div>
           <Link href="/admin/employees" className="btn btn-primary btn-xs">

@@ -86,6 +86,7 @@ function AnimatedStatNumber({
 
 export function PortalClient() {
   const [portal, setPortal] = useState<PortalOverview | null>(null);
+  const [schoolSlug, setSchoolSlug] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [apiError, setApiError] = useState<string | null>(null);
 
@@ -110,12 +111,19 @@ export function PortalClient() {
   const [selectedEvent, setSelectedEvent] = useState<CampusEvent | null>(null);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
 
-  const loadPortalData = useCallback(async () => {
+  const loadPortalData = useCallback(async (slugOverride?: string | null) => {
     setLoading(true);
     setApiError(null);
+    const slugToLoad =
+      slugOverride !== undefined
+        ? slugOverride
+        : typeof window !== "undefined"
+          ? new URLSearchParams(window.location.search).get("school")
+          : null;
     try {
-      const overview = await fetchPortalOverview();
+      const overview = await fetchPortalOverview(slugToLoad);
       setPortal(overview);
+      setSchoolSlug(overview.school.slug);
     } catch (err) {
       setApiError(
         err instanceof Error
@@ -127,19 +135,51 @@ export function PortalClient() {
     }
   }, []);
 
+  const handleSwitchSchool = useCallback(
+    (nextSlug: string) => {
+      if (typeof window !== "undefined") {
+        const nextUrl = new URL(window.location.href);
+        nextUrl.searchParams.set("school", nextSlug);
+        window.history.pushState({}, "", nextUrl.toString());
+      }
+      setAnnouncementCategory("all");
+      setEventCategory("all");
+      setStaffRole("all");
+      setStaffDepartment("all");
+      setStaffQuery("");
+      setMobileMenuOpen(false);
+      loadPortalData(nextSlug);
+    },
+    [loadPortalData]
+  );
+
   useEffect(() => {
     loadPortalData();
-
-    // Load saved event bookmarks
-    try {
-      const raw = localStorage.getItem(SAVED_EVENTS_KEY);
-      if (raw) {
-        setSavedEventIds(JSON.parse(raw) as number[]);
-      }
-    } catch {
-      // ignore storage errors
-    }
   }, [loadPortalData]);
+
+  useEffect(() => {
+    if (!portal?.school) return;
+    const active = portal.school;
+    document.title = `${active.short_name} — ${active.name}`;
+    const root = document.documentElement;
+    if (active.primary_color) {
+      root.style.setProperty("--primary", active.primary_color);
+    }
+    if (active.primary_dark_color) {
+      root.style.setProperty("--primary-dark", active.primary_dark_color);
+    }
+
+    // Load saved event bookmarks scoped to the active school
+    try {
+      const scopedKey = `${SAVED_EVENTS_KEY}_${active.slug}`;
+      const raw =
+        localStorage.getItem(scopedKey) ??
+        (active.is_default ? localStorage.getItem(SAVED_EVENTS_KEY) : null);
+      setSavedEventIds(raw ? (JSON.parse(raw) as number[]) : []);
+    } catch {
+      setSavedEventIds([]);
+    }
+  }, [portal?.school]);
 
   useEffect(() => {
     const onScroll = () => setIsScrolled(window.scrollY > 12);
@@ -204,7 +244,8 @@ export function PortalClient() {
       const next = prev.includes(eventId)
         ? prev.filter((id) => id !== eventId)
         : [...prev, eventId];
-      localStorage.setItem(SAVED_EVENTS_KEY, JSON.stringify(next));
+      const scopedKey = `${SAVED_EVENTS_KEY}_${schoolSlug || "alnavarroces"}`;
+      localStorage.setItem(scopedKey, JSON.stringify(next));
       return next;
     });
   };
@@ -258,9 +299,19 @@ export function PortalClient() {
   }, [allEmployees, staffRole, staffDepartment, deferredStaffQuery]);
 
   const school = portal?.school ?? {
+    id: 1,
+    slug: "alnavarroces",
+    school_code: "129652",
     short_name: "ALNAVARROCES",
     name: "A.L. Navarro Central Elementary School",
     tagline: "ALNAVARROCES Official School Portal",
+    grade_levels: "Kindergarten to Grade 6",
+    hero_description:
+      "Welcome to the ALNAVARROCES official school portal — your central hub for announcements, upcoming campus events, school statistics, and our dedicated teaching and non-teaching personnel directory.",
+    hero_image_url: "/assets/campus-hero.jpg",
+    logo_url: null,
+    primary_color: "#07187C",
+    primary_dark_color: "#041246",
     academic_year: "SY 2026–2027",
     current_term: "Second Quarter · Active",
     admissions_status: "Early Enrollment Open (K–6)",
@@ -268,7 +319,11 @@ export function PortalClient() {
     phone: "(082) 234-8900",
     email: "portal@alnavarroces.edu.ph",
     address: "A.L. Navarro Central Elementary School Campus, Lasang, Davao City",
+    custom_domain: null,
+    is_default: true,
+    is_active: true,
   };
+  const availableSchools = portal?.schools ?? [];
 
   return (
     <>
@@ -284,6 +339,23 @@ export function PortalClient() {
               <span className="status-dot" aria-hidden="true" />
               {school.academic_year} &middot; Live Portal System
             </span>
+            {availableSchools.length > 1 && (
+              <label className="utility-school-wrap">
+                <span className="sr-only">Switch school</span>
+                <select
+                  className="utility-school-select"
+                  aria-label="Select school portal"
+                  value={schoolSlug || school.slug}
+                  onChange={(e) => handleSwitchSchool(e.target.value)}
+                >
+                  {availableSchools.map((s) => (
+                    <option key={s.id} value={s.slug}>
+                      {s.short_name} — {s.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
           </div>
           <div className="utility-right">
             <a href="#announcements" className="utility-link">
@@ -409,6 +481,40 @@ export function PortalClient() {
               >
                 Teaching &amp; Non-Teaching Staff
               </a>
+
+              <div className="mobile-nav-utility" aria-label="Quick Links">
+                <span className="mobile-nav-utility-label">Quick Links</span>
+                <div className="mobile-nav-utility-links">
+                  <a
+                    href="#announcements"
+                    className="mobile-utility-link"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Academic Calendar
+                  </a>
+                  <a
+                    href="#statistics"
+                    className="mobile-utility-link"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    School Statistics
+                  </a>
+                  <a
+                    href="#directory"
+                    className="mobile-utility-link"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Staff Directory
+                  </a>
+                  <a
+                    href={`tel:${school.phone}`}
+                    className="mobile-utility-link mobile-utility-phone"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    {school.phone}
+                  </a>
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -426,7 +532,7 @@ export function PortalClient() {
               <button
                 type="button"
                 className="btn btn-primary btn-xs"
-                onClick={loadPortalData}
+                onClick={() => loadPortalData()}
               >
                 Retry Connection
               </button>
@@ -440,8 +546,8 @@ export function PortalClient() {
         <section className="hero" id="home" aria-label={`Welcome to ${school.name}`}>
           <div className="hero-media">
             <img
-              src="/assets/campus-hero.jpg"
-              alt="A.L. Navarro Central Elementary School campus courtyard and buildings"
+              src={school.hero_image_url || "/assets/campus-hero.jpg"}
+              alt={`${school.name} campus`}
               fetchPriority="high"
               className="hero-img"
             />
@@ -457,16 +563,12 @@ export function PortalClient() {
                     fill="currentColor"
                   />
                 </svg>
-                {school.short_name || "ALNAVARROCES"} &middot; Kindergarten to Grade 6
+                {school.short_name}
+                {school.school_code ? ` · ID ${school.school_code}` : ""}
+                {school.grade_levels ? ` · ${school.grade_levels}` : ""}
               </div>
-              <h1 className="hero-title">
-                A.L. Navarro Central Elementary School
-              </h1>
-              <p className="hero-lead">
-                Welcome to the {school.short_name || "ALNAVARROCES"} official school portal —
-                your central hub for announcements, upcoming campus events, school
-                statistics, and our dedicated teaching and non-teaching personnel directory.
-              </p>
+              <h1 className="hero-title">{school.name}</h1>
+              <p className="hero-lead">{school.hero_description}</p>
               <div className="hero-actions">
                 <a href="#announcements" className="btn btn-white btn-lg">
                   Latest Announcements
@@ -578,7 +680,7 @@ export function PortalClient() {
                 </h2>
                 <p className="section-desc">
                   Stay up to date with official administrative notices, academic deadlines,
-                  and school-wide celebrations synced directly from the ALNAVARROCES database.
+                  and school-wide celebrations synced directly from the {school.short_name} database.
                 </p>
               </div>
               <div className="saved-counter-pill" aria-live="polite">
@@ -824,9 +926,10 @@ export function PortalClient() {
 
             <div className="stats-summary-bar">
               <div className="summary-bar-text">
-                <strong>Dedicated Elementary Workforce:</strong> ALNAVARROCES educators and
-                non-teaching staff work together to deliver child-friendly, inclusive K–6
-                instruction, reading programs, and learner wellness services.
+                <strong>Dedicated School Workforce:</strong> {school.short_name} educators and
+                non-teaching staff work together to deliver child-friendly, inclusive{" "}
+                {school.grade_levels || "K–6"} instruction, reading programs, and learner
+                wellness services.
               </div>
               <a href="#directory" className="btn btn-white btn-sm">
                 Browse Staff Directory
@@ -1016,7 +1119,7 @@ export function PortalClient() {
               </span>
             </a>
             <p className="footer-desc">
-              Official Kindergarten–Grade 6 digital school portal powered by ACZolutions.
+              Official {school.grade_levels || "school"} digital portal powered by ACZolutions.
             </p>
           </div>
 

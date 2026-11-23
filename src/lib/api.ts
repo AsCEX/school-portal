@@ -4,6 +4,7 @@ import type {
   CampusEvent,
   Employee,
   PortalOverview,
+  SchoolInfo,
   SchoolStat,
 } from "@/types/portal";
 
@@ -15,6 +16,22 @@ const STORAGE_KEYS: Record<AuthScope, { token: string; user: string }> = {
   portal: { token: "alnces_portal_token", user: "alnces_portal_user" },
   admin: { token: "alnces_admin_token", user: "alnces_admin_user" },
 };
+
+const ACTIVE_ADMIN_SCHOOL_KEY = "alnces_admin_school_slug_v1";
+
+export function getActiveAdminSchoolSlug(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem(ACTIVE_ADMIN_SCHOOL_KEY);
+}
+
+export function setActiveAdminSchoolSlug(slug: string | null): void {
+  if (typeof window === "undefined") return;
+  if (slug) {
+    localStorage.setItem(ACTIVE_ADMIN_SCHOOL_KEY, slug);
+  } else {
+    localStorage.removeItem(ACTIVE_ADMIN_SCHOOL_KEY);
+  }
+}
 
 export function getStoredToken(scope: AuthScope = "portal"): string | null {
   if (typeof window === "undefined") return null;
@@ -49,7 +66,8 @@ export function clearAuthSession(scope: AuthScope = "portal"): void {
 async function apiRequest<T>(
   path: string,
   options: RequestInit = {},
-  authScope?: AuthScope
+  authScope?: AuthScope,
+  schoolSlug?: string | null
 ): Promise<T> {
   const headers: Record<string, string> = {
     Accept: "application/json",
@@ -62,6 +80,16 @@ async function apiRequest<T>(
     if (token) {
       headers.Authorization = `Bearer ${token}`;
     }
+  }
+
+  const effectiveSchool =
+    schoolSlug !== undefined
+      ? schoolSlug
+      : authScope === "admin"
+        ? getActiveAdminSchoolSlug()
+        : null;
+  if (effectiveSchool) {
+    headers["X-School-Slug"] = effectiveSchool;
   }
 
   const response = await fetch(`${API_BASE_URL}${path}`, {
@@ -84,8 +112,54 @@ async function apiRequest<T>(
   return payload as T;
 }
 
-export function fetchPortalOverview(): Promise<PortalOverview> {
-  return apiRequest<PortalOverview>("/portal");
+export function fetchPortalOverview(
+  schoolSlug?: string | null,
+  authScope?: AuthScope
+): Promise<PortalOverview> {
+  const qs = schoolSlug ? `?school=${encodeURIComponent(schoolSlug)}` : "";
+  return apiRequest<PortalOverview>(`/portal${qs}`, {}, authScope, schoolSlug ?? null);
+}
+
+export function fetchSchools(includeInactive = false): Promise<{ data: SchoolInfo[] }> {
+  const qs = includeInactive ? "?include_inactive=1" : "";
+  return apiRequest<{ data: SchoolInfo[] }>(
+    `/schools${qs}`,
+    {},
+    includeInactive ? "admin" : undefined,
+    null
+  );
+}
+
+export function createSchool(
+  payload: Omit<SchoolInfo, "id">
+): Promise<{ data: SchoolInfo }> {
+  return apiRequest<{ data: SchoolInfo }>(
+    "/schools",
+    { method: "POST", body: JSON.stringify(payload) },
+    "admin",
+    null
+  );
+}
+
+export function updateSchool(
+  id: number,
+  payload: Partial<Omit<SchoolInfo, "id">>
+): Promise<{ data: SchoolInfo }> {
+  return apiRequest<{ data: SchoolInfo }>(
+    `/schools/${id}`,
+    { method: "PUT", body: JSON.stringify(payload) },
+    "admin",
+    null
+  );
+}
+
+export function deleteSchool(id: number): Promise<{ message: string }> {
+  return apiRequest<{ message: string }>(
+    `/schools/${id}`,
+    { method: "DELETE" },
+    "admin",
+    null
+  );
 }
 
 export async function loginUser(
@@ -98,7 +172,9 @@ export async function loginUser(
     {
       method: "POST",
       body: JSON.stringify({ email, password }),
-    }
+    },
+    undefined,
+    null
   );
   saveAuthSession(data.token, data.user, scope);
   return data;
@@ -107,18 +183,18 @@ export async function loginUser(
 export function fetchCurrentUser(
   scope: AuthScope = "portal"
 ): Promise<{ user: AuthUser }> {
-  return apiRequest<{ user: AuthUser }>("/auth/me", {}, scope);
+  return apiRequest<{ user: AuthUser }>("/auth/me", {}, scope, null);
 }
 
 export async function logoutUser(scope: AuthScope = "portal"): Promise<void> {
   try {
-    await apiRequest<{ message: string }>("/auth/logout", { method: "POST" }, scope);
+    await apiRequest<{ message: string }>("/auth/logout", { method: "POST" }, scope, null);
   } finally {
     clearAuthSession(scope);
   }
 }
 
-// Announcements CRUD (Admin Scope)
+// Announcements CRUD (Admin Scope — automatically scoped to active admin school via X-School-Slug)
 export function createAnnouncement(
   payload: Omit<Announcement, "id">
 ): Promise<{ data: Announcement }> {
