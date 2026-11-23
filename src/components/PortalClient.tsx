@@ -363,6 +363,19 @@ export function PortalClient() {
               </li>
             </ul>
           </nav>
+
+          <button
+            type="button"
+            className="mobile-menu-toggle"
+            aria-expanded={mobileMenuOpen}
+            aria-label="Toggle navigation menu"
+            onClick={() => setMobileMenuOpen((v) => !v)}
+          >
+            <span className="hamburger-line" />
+            <span className="hamburger-line" />
+            <span className="hamburger-line" />
+          </button>
+
         </div>
 
         {mobileMenuOpen && (
@@ -399,26 +412,28 @@ export function PortalClient() {
             </div>
           </div>
         )}
-      </header>
+      </header >
 
       {/* API Connection Warning (if Laravel server isn't up yet) */}
-      {apiError && (
-        <div className="api-status-banner" role="alert">
-          <div className="container api-status-inner">
-            <span>
-              <strong>Backend API unreachable:</strong> {apiError}. Start Laravel with{" "}
-              <code>cd backend &amp;&amp; php artisan serve</code>.
-            </span>
-            <button
-              type="button"
-              className="btn btn-primary btn-xs"
-              onClick={loadPortalData}
-            >
-              Retry Connection
-            </button>
+      {
+        apiError && (
+          <div className="api-status-banner" role="alert">
+            <div className="container api-status-inner">
+              <span>
+                <strong>Backend API unreachable:</strong> {apiError}. Start Laravel with{" "}
+                <code>cd backend &amp;&amp; php artisan serve</code>.
+              </span>
+              <button
+                type="button"
+                className="btn btn-primary btn-xs"
+                onClick={loadPortalData}
+              >
+                Retry Connection
+              </button>
+            </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
       <main id="main-content">
         {/* Hero Banner */}
@@ -1062,261 +1077,267 @@ export function PortalClient() {
       </footer>
 
       {/* Announcement Detail Modal */}
-      {selectedAnnouncement && (
-        <div
-          className="modal-backdrop"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="ann-modal-title"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setSelectedAnnouncement(null);
-          }}
-        >
-          <div className="modal-dialog">
-            <button
-              type="button"
-              className="modal-close"
-              onClick={() => setSelectedAnnouncement(null)}
-              aria-label="Close modal"
-            >
-              <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
-                <path
-                  d="M5 5L15 15M15 5L5 15"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                />
-              </svg>
-            </button>
-            <div className="announcement-meta">
-              {selectedAnnouncement.is_pinned && (
-                <span className="tag tag-solid">Pinned Notice</span>
-              )}
-              <span className="tag tag-soft">{selectedAnnouncement.category}</span>
-              <span className="announcement-date">
-                {formatDate(selectedAnnouncement.published_at)}
-              </span>
-            </div>
-            <h3 className="modal-heading" id="ann-modal-title">
-              {selectedAnnouncement.title}
-            </h3>
-            <div className="modal-meta-grid">
-              <div>
-                <span className="meta-cell-label">Issued By</span>
-                <span className="meta-cell-value">{selectedAnnouncement.office}</span>
-              </div>
-              <div>
-                <span className="meta-cell-label">Published</span>
-                <span className="meta-cell-value">
+      {
+        selectedAnnouncement && (
+          <div
+            className="modal-backdrop"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="ann-modal-title"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setSelectedAnnouncement(null);
+            }}
+          >
+            <div className="modal-dialog">
+              <button
+                type="button"
+                className="modal-close"
+                onClick={() => setSelectedAnnouncement(null)}
+                aria-label="Close modal"
+              >
+                <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                  <path
+                    d="M5 5L15 15M15 5L5 15"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </button>
+              <div className="announcement-meta">
+                {selectedAnnouncement.is_pinned && (
+                  <span className="tag tag-solid">Pinned Notice</span>
+                )}
+                <span className="tag tag-soft">{selectedAnnouncement.category}</span>
+                <span className="announcement-date">
                   {formatDate(selectedAnnouncement.published_at)}
                 </span>
               </div>
-            </div>
-            <p className="modal-body-text">{selectedAnnouncement.body}</p>
-            <div className="modal-actions-row">
-              <button
-                type="button"
-                className="btn btn-primary btn-sm"
-                onClick={() => setSelectedAnnouncement(null)}
-              >
-                Close Notice
-              </button>
+              <h3 className="modal-heading" id="ann-modal-title">
+                {selectedAnnouncement.title}
+              </h3>
+              <div className="modal-meta-grid">
+                <div>
+                  <span className="meta-cell-label">Issued By</span>
+                  <span className="meta-cell-value">{selectedAnnouncement.office}</span>
+                </div>
+                <div>
+                  <span className="meta-cell-label">Published</span>
+                  <span className="meta-cell-value">
+                    {formatDate(selectedAnnouncement.published_at)}
+                  </span>
+                </div>
+              </div>
+              <p className="modal-body-text">{selectedAnnouncement.body}</p>
+              <div className="modal-actions-row">
+                <button
+                  type="button"
+                  className="btn btn-primary btn-sm"
+                  onClick={() => setSelectedAnnouncement(null)}
+                >
+                  Close Notice
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
       {/* Event Detail Modal */}
-      {selectedEvent && (
-        <div
-          className="modal-backdrop"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="evt-modal-title"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setSelectedEvent(null);
-          }}
-        >
-          <div className="modal-dialog">
-            <button
-              type="button"
-              className="modal-close"
-              onClick={() => setSelectedEvent(null)}
-              aria-label="Close modal"
-            >
-              <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
-                <path
-                  d="M5 5L15 15M15 5L5 15"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                />
-              </svg>
-            </button>
-            <div className="announcement-meta">
-              <span className="tag tag-solid">
-                {selectedEvent.month_label} {selectedEvent.day_label}
-              </span>
-              <span className="tag tag-soft">{selectedEvent.category}</span>
-            </div>
-            <h3 className="modal-heading" id="evt-modal-title">
-              {selectedEvent.title}
-            </h3>
-            <div className="modal-meta-grid">
-              <div>
-                <span className="meta-cell-label">Time</span>
-                <span className="meta-cell-value">{selectedEvent.time_range}</span>
-              </div>
-              <div>
-                <span className="meta-cell-label">Location</span>
-                <span className="meta-cell-value">{selectedEvent.location}</span>
-              </div>
-              <div>
-                <span className="meta-cell-label">Hosted By</span>
-                <span className="meta-cell-value">{selectedEvent.host}</span>
-              </div>
-              <div>
-                <span className="meta-cell-label">Date</span>
-                <span className="meta-cell-value">
-                  {formatDate(selectedEvent.event_date)}
-                </span>
-              </div>
-            </div>
-            <p className="modal-body-text">{selectedEvent.description}</p>
-            <div className="modal-actions-row">
+      {
+        selectedEvent && (
+          <div
+            className="modal-backdrop"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="evt-modal-title"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setSelectedEvent(null);
+            }}
+          >
+            <div className="modal-dialog">
               <button
                 type="button"
-                className="btn btn-primary btn-sm"
-                onClick={() => toggleSaveEvent(selectedEvent.id)}
-              >
-                {savedEventSet.has(selectedEvent.id)
-                  ? "Saved in Reminders"
-                  : "Save Event Reminder"}
-              </button>
-              <button
-                type="button"
-                className="btn btn-outline btn-sm"
+                className="modal-close"
                 onClick={() => setSelectedEvent(null)}
+                aria-label="Close modal"
               >
-                Close
+                <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                  <path
+                    d="M5 5L15 15M15 5L5 15"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                  />
+                </svg>
               </button>
+              <div className="announcement-meta">
+                <span className="tag tag-solid">
+                  {selectedEvent.month_label} {selectedEvent.day_label}
+                </span>
+                <span className="tag tag-soft">{selectedEvent.category}</span>
+              </div>
+              <h3 className="modal-heading" id="evt-modal-title">
+                {selectedEvent.title}
+              </h3>
+              <div className="modal-meta-grid">
+                <div>
+                  <span className="meta-cell-label">Time</span>
+                  <span className="meta-cell-value">{selectedEvent.time_range}</span>
+                </div>
+                <div>
+                  <span className="meta-cell-label">Location</span>
+                  <span className="meta-cell-value">{selectedEvent.location}</span>
+                </div>
+                <div>
+                  <span className="meta-cell-label">Hosted By</span>
+                  <span className="meta-cell-value">{selectedEvent.host}</span>
+                </div>
+                <div>
+                  <span className="meta-cell-label">Date</span>
+                  <span className="meta-cell-value">
+                    {formatDate(selectedEvent.event_date)}
+                  </span>
+                </div>
+              </div>
+              <p className="modal-body-text">{selectedEvent.description}</p>
+              <div className="modal-actions-row">
+                <button
+                  type="button"
+                  className="btn btn-primary btn-sm"
+                  onClick={() => toggleSaveEvent(selectedEvent.id)}
+                >
+                  {savedEventSet.has(selectedEvent.id)
+                    ? "Saved in Reminders"
+                    : "Save Event Reminder"}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-outline btn-sm"
+                  onClick={() => setSelectedEvent(null)}
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
       {/* Employee Profile Modal */}
-      {selectedEmployee && (
-        <div
-          className="modal-backdrop"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="emp-modal-title"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setSelectedEmployee(null);
-          }}
-        >
-          <div className="modal-dialog">
-            <button
-              type="button"
-              className="modal-close"
-              onClick={() => setSelectedEmployee(null)}
-              aria-label="Close modal"
-            >
-              <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
-                <path
-                  d="M5 5L15 15M15 5L5 15"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                />
-              </svg>
-            </button>
-            <div className="profile-modal-header">
-              <img
-                src={selectedEmployee.photo_url || "/assets/staff-1.jpg"}
-                alt={`Portrait of ${selectedEmployee.name}`}
-                className="profile-modal-avatar"
-              />
-              <div>
-                <span
-                  className={`tag ${selectedEmployee.role_type === "Teaching"
-                    ? "tag-solid"
-                    : "tag-outline"
-                    }`}
-                >
-                  {selectedEmployee.role_type} Staff
-                </span>
-                <h3
-                  className="modal-heading"
-                  id="emp-modal-title"
-                  style={{ paddingRight: 0, marginBottom: 4 }}
-                >
-                  {selectedEmployee.name}
-                </h3>
-                <p
-                  style={{
-                    margin: 0,
-                    fontSize: "0.9rem",
-                    color: "var(--ink-secondary)",
-                    fontWeight: 600,
-                  }}
-                >
-                  {selectedEmployee.title}
-                </p>
-              </div>
-            </div>
-
-            <div className="modal-meta-grid">
-              <div>
-                <span className="meta-cell-label">Department</span>
-                <span className="meta-cell-value">{selectedEmployee.department}</span>
-              </div>
-              <div>
-                <span className="meta-cell-label">Tenure</span>
-                <span className="meta-cell-value">{selectedEmployee.years_of_service}</span>
-              </div>
-              <div>
-                <span className="meta-cell-label">Office</span>
-                <span className="meta-cell-value">{selectedEmployee.office}</span>
-              </div>
-              <div>
-                <span className="meta-cell-label">Office Hours</span>
-                <span className="meta-cell-value">{selectedEmployee.office_hours}</span>
-              </div>
-            </div>
-
-            <p
-              style={{
-                margin: "0 0 8px",
-                fontSize: "0.84rem",
-                color: "var(--primary)",
-                fontWeight: 700,
-              }}
-            >
-              Education: {selectedEmployee.education}
-            </p>
-            <p className="modal-body-text" style={{ marginTop: 8 }}>
-              {selectedEmployee.bio}
-            </p>
-            <div className="modal-actions-row">
-              <a
-                href={`mailto:${selectedEmployee.email}`}
-                className="btn btn-primary btn-sm"
-              >
-                Email {selectedEmployee.name.split(" ")[0]}
-              </a>
+      {
+        selectedEmployee && (
+          <div
+            className="modal-backdrop"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="emp-modal-title"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setSelectedEmployee(null);
+            }}
+          >
+            <div className="modal-dialog">
               <button
                 type="button"
-                className="btn btn-outline btn-sm"
+                className="modal-close"
                 onClick={() => setSelectedEmployee(null)}
+                aria-label="Close modal"
               >
-                Close
+                <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                  <path
+                    d="M5 5L15 15M15 5L5 15"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                  />
+                </svg>
               </button>
+              <div className="profile-modal-header">
+                <img
+                  src={selectedEmployee.photo_url || "/assets/staff-1.jpg"}
+                  alt={`Portrait of ${selectedEmployee.name}`}
+                  className="profile-modal-avatar"
+                />
+                <div>
+                  <span
+                    className={`tag ${selectedEmployee.role_type === "Teaching"
+                      ? "tag-solid"
+                      : "tag-outline"
+                      }`}
+                  >
+                    {selectedEmployee.role_type} Staff
+                  </span>
+                  <h3
+                    className="modal-heading"
+                    id="emp-modal-title"
+                    style={{ paddingRight: 0, marginBottom: 4 }}
+                  >
+                    {selectedEmployee.name}
+                  </h3>
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: "0.9rem",
+                      color: "var(--ink-secondary)",
+                      fontWeight: 600,
+                    }}
+                  >
+                    {selectedEmployee.title}
+                  </p>
+                </div>
+              </div>
+
+              <div className="modal-meta-grid">
+                <div>
+                  <span className="meta-cell-label">Department</span>
+                  <span className="meta-cell-value">{selectedEmployee.department}</span>
+                </div>
+                <div>
+                  <span className="meta-cell-label">Tenure</span>
+                  <span className="meta-cell-value">{selectedEmployee.years_of_service}</span>
+                </div>
+                <div>
+                  <span className="meta-cell-label">Office</span>
+                  <span className="meta-cell-value">{selectedEmployee.office}</span>
+                </div>
+                <div>
+                  <span className="meta-cell-label">Office Hours</span>
+                  <span className="meta-cell-value">{selectedEmployee.office_hours}</span>
+                </div>
+              </div>
+
+              <p
+                style={{
+                  margin: "0 0 8px",
+                  fontSize: "0.84rem",
+                  color: "var(--primary)",
+                  fontWeight: 700,
+                }}
+              >
+                Education: {selectedEmployee.education}
+              </p>
+              <p className="modal-body-text" style={{ marginTop: 8 }}>
+                {selectedEmployee.bio}
+              </p>
+              <div className="modal-actions-row">
+                <a
+                  href={`mailto:${selectedEmployee.email}`}
+                  className="btn btn-primary btn-sm"
+                >
+                  Email {selectedEmployee.name.split(" ")[0]}
+                </a>
+                <button
+                  type="button"
+                  className="btn btn-outline btn-sm"
+                  onClick={() => setSelectedEmployee(null)}
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      }
     </>
   );
 }

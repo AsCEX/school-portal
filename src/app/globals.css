@@ -321,12 +321,14 @@ button:focus-visible {
   display: inline-flex;
   align-items: center;
   gap: 12px;
-  flex-shrink: 0;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .brand-crest {
   width: 40px;
   height: 40px;
+  flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -341,6 +343,7 @@ button:focus-visible {
   display: flex;
   flex-direction: column;
   line-height: 1.15;
+  min-width: 0;
 }
 
 .brand-name {
@@ -348,6 +351,9 @@ button:focus-visible {
   font-weight: 800;
   color: var(--ink);
   letter-spacing: -0.02em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .brand-sub {
@@ -357,6 +363,9 @@ button:focus-visible {
   letter-spacing: 0.04em;
   text-transform: uppercase;
   margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .main-nav {
@@ -399,6 +408,7 @@ button:focus-visible {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-shrink: 0;
 }
 
 .user-pill {
@@ -3198,17 +3208,89 @@ button:focus-visible {
 }
 
 @media (max-width: 640px) {
+  .container {
+    padding: 0 16px;
+  }
+
   .utility-right {
     display: none;
   }
 
+  .header-inner {
+    gap: 12px;
+    height: auto;
+    min-height: 68px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+
+  .brand {
+    flex: 1 1 auto;
+    gap: 10px;
+  }
+
+  .brand-crest,
+  .brand-crest svg {
+    width: 34px;
+    height: 34px;
+  }
+
+  .brand-name {
+    font-size: 0.96rem;
+  }
+
+  .brand-sub {
+    font-size: 0.64rem;
+    letter-spacing: 0.02em;
+  }
+
+  .mobile-menu-toggle {
+    flex-shrink: 0;
+  }
+
+  .admin-header-left {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .admin-page-title {
+    font-size: 1.15rem;
+  }
+
   .hero-content {
-    padding-top: 56px;
-    padding-bottom: 48px;
+    padding-top: 52px;
+    padding-bottom: 44px;
+  }
+
+  .hero-title {
+    font-size: clamp(1.85rem, 8vw, 2.35rem);
+  }
+
+  .hero-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .hero-actions .btn {
+    width: 100%;
   }
 
   .section {
-    padding: 58px 0;
+    padding: 52px 0;
+  }
+
+  .announcement-card {
+    padding: 18px 16px;
+  }
+
+  .events-card-header {
+    flex-wrap: wrap;
+    padding: 16px;
+  }
+
+  .event-item {
+    padding: 14px 16px;
+    gap: 12px;
   }
 
   .kpi-grid,
@@ -3222,13 +3304,15 @@ button:focus-visible {
 
   .role-tabs {
     width: 100%;
+    display: flex;
+    flex-direction: column;
   }
 
   .role-tab {
-    flex: 1;
-    justify-content: center;
-    padding: 8px 10px;
-    font-size: 0.8rem;
+    width: 100%;
+    justify-content: space-between;
+    padding: 9px 12px;
+    font-size: 0.84rem;
   }
 
   .directory-filters,
@@ -3237,6 +3321,13 @@ button:focus-visible {
   .table-search {
     width: 100%;
     max-width: none;
+    min-width: 0;
+  }
+
+  .at-col-primary {
+    position: static;
+    min-width: 180px;
+    box-shadow: none;
   }
 }
 
