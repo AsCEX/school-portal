@@ -120,7 +120,7 @@ export function PortalClient() {
       setApiError(
         err instanceof Error
           ? err.message
-          : "Unable to connect to Laravel API."
+          : "Unable to connect to the portal API."
       );
     } finally {
       setLoading(false);
@@ -414,14 +414,14 @@ export function PortalClient() {
         )}
       </header >
 
-      {/* API Connection Warning (if Laravel server isn't up yet) */}
+      {/* API Connection Warning (if Worker API isn't up yet) */}
       {
         apiError && (
           <div className="api-status-banner" role="alert">
             <div className="container api-status-inner">
               <span>
-                <strong>Backend API unreachable:</strong> {apiError}. Start Laravel with{" "}
-                <code>cd backend &amp;&amp; php artisan serve</code>.
+                <strong>Portal API unreachable:</strong> {apiError}. Run the local Cloudflare Worker with{" "}
+                <code>npm run cf:dev</code>.
               </span>
               <button
                 type="button"
@@ -578,7 +578,7 @@ export function PortalClient() {
                 </h2>
                 <p className="section-desc">
                   Stay up to date with official administrative notices, academic deadlines,
-                  and school-wide celebrations synced directly from the Laravel backend.
+                  and school-wide celebrations synced directly from the ALNAVARROCES database.
                 </p>
               </div>
               <div className="saved-counter-pill" aria-live="polite">

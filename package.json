@@ -6,7 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:migrate:local": "npx wrangler d1 migrations apply alnavarroces-portal-db --local",
+    "db:migrate:remote": "npx wrangler d1 migrations apply alnavarroces-portal-db --remote",
+    "cf:dev": "npx wrangler dev",
+    "cf:deploy": "npm run build && npx wrangler deploy"
   },
   "dependencies": {
     "next": "16.4.6",

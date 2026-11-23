@@ -62,7 +62,7 @@ export function LoginModal({
       setError(
         err instanceof Error
           ? err.message
-          : "Unable to sign in. Ensure the Laravel API server is running."
+          : "Unable to sign in. Ensure the portal API is running."
       );
     } finally {
       setSubmitting(false);

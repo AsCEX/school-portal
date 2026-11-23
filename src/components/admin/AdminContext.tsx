@@ -77,7 +77,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       setStatusMessage(
         err instanceof Error
           ? err.message
-          : "Unable to connect to Laravel API server."
+          : "Unable to connect to the portal API server."
       );
     } finally {
       setLoadingData(false);
