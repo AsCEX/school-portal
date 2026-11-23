@@ -72,7 +72,7 @@ export default function AdminDashboardOverviewPage() {
         </div>
 
         <div className="table-wrap">
-          <table className="data-table density-medium">
+          <table className="data-table density-short">
             <thead>
               <tr>
                 <th className="at-col-index">#</th>
@@ -132,7 +132,7 @@ export default function AdminDashboardOverviewPage() {
         </div>
 
         <div className="table-wrap">
-          <table className="data-table density-medium">
+          <table className="data-table density-short">
             <thead>
               <tr>
                 <th className="at-col-index">#</th>

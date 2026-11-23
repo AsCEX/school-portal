@@ -17,7 +17,7 @@ import {
   logoutUser,
   setActiveAdminSchoolSlug,
 } from "@/lib/api";
-import type { AuthUser, PortalOverview } from "@/types/portal";
+import type { AdminPermission, AuthUser, PortalOverview } from "@/types/portal";
 
 export type AdminTheme = "dark" | "light";
 
@@ -26,6 +26,7 @@ const ADMIN_THEME_KEY = "alnces_admin_theme_v1";
 interface AdminContextValue {
   user: AuthUser | null;
   authChecked: boolean;
+  hasPermission: (permission: AdminPermission) => boolean;
   portal: PortalOverview | null;
   activeSchoolSlug: string | null;
   selectSchool: (slug: string) => Promise<void>;
@@ -148,6 +149,15 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     [refreshData]
   );
 
+  const hasPermission = useCallback(
+    (permission: AdminPermission): boolean => {
+      if (!user) return false;
+      if (user.role === "admin") return true;
+      return (user.permissions ?? []).includes(permission);
+    },
+    [user]
+  );
+
   const signOutAdmin = useCallback(async () => {
     await logoutUser("admin");
     setUser(null);
@@ -159,6 +169,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       value={{
         user,
         authChecked,
+        hasPermission,
         portal,
         activeSchoolSlug,
         selectSchool,

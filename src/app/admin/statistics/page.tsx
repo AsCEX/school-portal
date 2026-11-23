@@ -26,7 +26,7 @@ export default function AdminStatisticsPage() {
   const { portal, refreshData, setStatusMessage } = useAdmin();
 
   const [search, setSearch] = useState("");
-  const [density, setDensity] = useState<RowDensity>("medium");
+  const [density, setDensity] = useState<RowDensity>("short");
   const [sortBy, setSortBy] = useState<string>("sort_order");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
 

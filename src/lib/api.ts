@@ -1,8 +1,10 @@
 import type {
+  AdminPermission,
   Announcement,
   AuthUser,
   CampusEvent,
   Employee,
+  EmployeeAccount,
   PortalOverview,
   SchoolInfo,
   SchoolStat,
@@ -309,6 +311,37 @@ export function updateEmployee(
 export function deleteEmployee(id: number): Promise<{ message: string }> {
   return apiRequest<{ message: string }>(
     `/employees/${id}`,
+    { method: "DELETE" },
+    "admin"
+  );
+}
+
+// Employee Login & RBAC Permissions (Admin Scope)
+export interface AssignEmployeeAccountPayload {
+  email: string;
+  password?: string;
+  role: "admin" | "faculty" | "student" | "parent";
+  permissions: AdminPermission[];
+  is_active: boolean;
+  all_schools?: boolean;
+}
+
+export function assignEmployeeAccount(
+  employeeId: number,
+  payload: AssignEmployeeAccountPayload
+): Promise<{ data: EmployeeAccount }> {
+  return apiRequest<{ data: EmployeeAccount }>(
+    `/employees/${employeeId}/account`,
+    { method: "PUT", body: JSON.stringify(payload) },
+    "admin"
+  );
+}
+
+export function revokeEmployeeAccount(
+  employeeId: number
+): Promise<{ message: string }> {
+  return apiRequest<{ message: string }>(
+    `/employees/${employeeId}/account`,
     { method: "DELETE" },
     "admin"
   );

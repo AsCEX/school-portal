@@ -25,6 +25,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const {
     user,
     authChecked,
+    hasPermission,
     portal,
     activeSchoolSlug,
     selectSchool,
@@ -78,6 +79,15 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
   const pageTitle = PAGE_TITLES[pathname] || "Admin Console";
 
+  const hasRouteAccess =
+    pathname === "/admin" ||
+    (pathname === "/admin/schools" && hasPermission("manage_schools")) ||
+    (pathname === "/admin/announcements" && hasPermission("manage_announcements")) ||
+    (pathname === "/admin/events" && hasPermission("manage_events")) ||
+    (pathname === "/admin/statistics" && hasPermission("manage_statistics")) ||
+    (pathname === "/admin/employees" &&
+      (hasPermission("manage_employees") || hasPermission("manage_accounts")));
+
   const handleSignOut = async () => {
     await signOutAdmin();
     router.replace("/admin/login");
@@ -109,7 +119,8 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           </Link>
         </div>
 
-        {(portal?.schools?.length ?? 0) > 0 && (
+        {((portal?.schools?.length ?? 0) > 1 || user.is_super_admin) &&
+          (portal?.schools?.length ?? 0) > 0 && (
           <div className="admin-school-switcher">
             <label htmlFor="admin-school-select" className="admin-nav-label">
               Active School
@@ -119,7 +130,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               className="admin-school-select"
               value={activeSchoolSlug || portal?.school.slug || ""}
               onChange={(e) => selectSchool(e.target.value)}
-              disabled={loadingData}
+              disabled={loadingData || !user.is_super_admin}
             >
               {(portal?.schools ?? []).map((s) => (
                 <option key={s.id} value={s.slug}>
@@ -148,86 +159,96 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             <span>Dashboard</span>
           </Link>
 
-          <Link
-            href="/admin/schools"
-            aria-current={pathname === "/admin/schools" ? "page" : undefined}
-            className={`admin-nav-item ${pathname === "/admin/schools" ? "active" : ""}`}
-          >
-            <svg className="admin-nav-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-              <path
-                d="M10 3L2.5 7L10 11L17.5 7L10 3Z"
-                stroke="currentColor"
-                strokeWidth="1.6"
-                strokeLinejoin="round"
-              />
-              <path
-                d="M4.5 8.8V14.5C4.5 15.3 7 16.5 10 16.5C13 16.5 15.5 15.3 15.5 14.5V8.8"
-                stroke="currentColor"
-                strokeWidth="1.6"
-                strokeLinecap="round"
-              />
-            </svg>
-            <span>Schools &amp; Profiles</span>
-            <span className="admin-nav-badge">{portal?.schools?.length ?? 1}</span>
-          </Link>
+          {hasPermission("manage_schools") && (
+            <Link
+              href="/admin/schools"
+              aria-current={pathname === "/admin/schools" ? "page" : undefined}
+              className={`admin-nav-item ${pathname === "/admin/schools" ? "active" : ""}`}
+            >
+              <svg className="admin-nav-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                <path
+                  d="M10 3L2.5 7L10 11L17.5 7L10 3Z"
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M4.5 8.8V14.5C4.5 15.3 7 16.5 10 16.5C13 16.5 15.5 15.3 15.5 14.5V8.8"
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                  strokeLinecap="round"
+                />
+              </svg>
+              <span>Schools &amp; Profiles</span>
+              <span className="admin-nav-badge">{portal?.schools?.length ?? 1}</span>
+            </Link>
+          )}
 
           <span className="admin-nav-label" style={{ marginTop: 10 }}>
             Portal Content
           </span>
 
-          <Link
-            href="/admin/announcements"
-            aria-current={pathname === "/admin/announcements" ? "page" : undefined}
-            className={`admin-nav-item ${pathname === "/admin/announcements" ? "active" : ""
-              }`}
-          >
-            <svg className="admin-nav-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-              <path d="M4 5.5H16M4 10H16M4 14.5H11" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-            </svg>
-            <span>Announcements</span>
-            <span className="admin-nav-badge">{portal?.announcements.length ?? 0}</span>
-          </Link>
+          {hasPermission("manage_announcements") && (
+            <Link
+              href="/admin/announcements"
+              aria-current={pathname === "/admin/announcements" ? "page" : undefined}
+              className={`admin-nav-item ${pathname === "/admin/announcements" ? "active" : ""
+                }`}
+            >
+              <svg className="admin-nav-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                <path d="M4 5.5H16M4 10H16M4 14.5H11" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+              </svg>
+              <span>Announcements</span>
+              <span className="admin-nav-badge">{portal?.announcements.length ?? 0}</span>
+            </Link>
+          )}
 
-          <Link
-            href="/admin/events"
-            aria-current={pathname === "/admin/events" ? "page" : undefined}
-            className={`admin-nav-item ${pathname === "/admin/events" ? "active" : ""
-              }`}
-          >
-            <svg className="admin-nav-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-              <rect x="3" y="4.5" width="14" height="12.5" rx="2" stroke="currentColor" strokeWidth="1.6" />
-              <path d="M3 8.5H17M7 2.5V5M13 2.5V5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-            </svg>
-            <span>Upcoming Events</span>
-            <span className="admin-nav-badge">{portal?.events.length ?? 0}</span>
-          </Link>
+          {hasPermission("manage_events") && (
+            <Link
+              href="/admin/events"
+              aria-current={pathname === "/admin/events" ? "page" : undefined}
+              className={`admin-nav-item ${pathname === "/admin/events" ? "active" : ""
+                }`}
+            >
+              <svg className="admin-nav-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                <rect x="3" y="4.5" width="14" height="12.5" rx="2" stroke="currentColor" strokeWidth="1.6" />
+                <path d="M3 8.5H17M7 2.5V5M13 2.5V5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+              </svg>
+              <span>Upcoming Events</span>
+              <span className="admin-nav-badge">{portal?.events.length ?? 0}</span>
+            </Link>
+          )}
 
-          <Link
-            href="/admin/statistics"
-            aria-current={pathname === "/admin/statistics" ? "page" : undefined}
-            className={`admin-nav-item ${pathname === "/admin/statistics" ? "active" : ""
-              }`}
-          >
-            <svg className="admin-nav-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-              <path d="M4 16V10M10 16V4M16 16V7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-            </svg>
-            <span>School Statistics</span>
-            <span className="admin-nav-badge">{portal?.statistics.length ?? 0}</span>
-          </Link>
+          {hasPermission("manage_statistics") && (
+            <Link
+              href="/admin/statistics"
+              aria-current={pathname === "/admin/statistics" ? "page" : undefined}
+              className={`admin-nav-item ${pathname === "/admin/statistics" ? "active" : ""
+                }`}
+            >
+              <svg className="admin-nav-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                <path d="M4 16V10M10 16V4M16 16V7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+              </svg>
+              <span>School Statistics</span>
+              <span className="admin-nav-badge">{portal?.statistics.length ?? 0}</span>
+            </Link>
+          )}
 
-          <Link
-            href="/admin/employees"
-            aria-current={pathname === "/admin/employees" ? "page" : undefined}
-            className={`admin-nav-item ${pathname === "/admin/employees" ? "active" : ""
-              }`}
-          >
-            <svg className="admin-nav-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-              <circle cx="10" cy="6.5" r="3" stroke="currentColor" strokeWidth="1.6" />
-              <path d="M4 16.5C4.8 13.8 7.1 12.5 10 12.5C12.9 12.5 15.2 13.8 16 16.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-            </svg>
-            <span>Employee Profiles</span>
-            <span className="admin-nav-badge">{portal?.employees.length ?? 0}</span>
-          </Link>
+          {(hasPermission("manage_employees") || hasPermission("manage_accounts")) && (
+            <Link
+              href="/admin/employees"
+              aria-current={pathname === "/admin/employees" ? "page" : undefined}
+              className={`admin-nav-item ${pathname === "/admin/employees" ? "active" : ""
+                }`}
+            >
+              <svg className="admin-nav-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                <circle cx="10" cy="6.5" r="3" stroke="currentColor" strokeWidth="1.6" />
+                <path d="M4 16.5C4.8 13.8 7.1 12.5 10 12.5C12.9 12.5 15.2 13.8 16 16.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+              </svg>
+              <span>Employee Profiles</span>
+              <span className="admin-nav-badge">{portal?.employees.length ?? 0}</span>
+            </Link>
+          )}
         </nav>
 
         <div className="admin-sidebar-footer">
@@ -285,10 +306,13 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           <div className="admin-header-right">
             <button
               type="button"
-              className="btn btn-outline btn-sm"
+              className="btn btn-outline admin-icon-btn"
               onClick={toggleTheme}
               aria-pressed={theme === "dark"}
               aria-label={
+                theme === "dark" ? "Switch to light mode" : "Switch to dark mode"
+              }
+              title={
                 theme === "dark" ? "Switch to light mode" : "Switch to dark mode"
               }
             >
@@ -312,16 +336,30 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                   />
                 </svg>
               )}
-              <span>{theme === "dark" ? "Light Mode" : "Dark Mode"}</span>
             </button>
 
             <button
               type="button"
-              className="btn btn-outline btn-sm"
+              className="btn btn-outline admin-icon-btn"
               onClick={() => refreshData()}
               disabled={loadingData}
+              aria-label={loadingData ? "Refreshing data" : "Refresh data"}
+              title={loadingData ? "Refreshing…" : "Refresh data"}
             >
-              {loadingData ? "Refreshing…" : "Refresh Data"}
+              <svg
+                className={`btn-icon ${loadingData ? "is-spinning" : ""}`}
+                viewBox="0 0 20 20"
+                fill="none"
+                aria-hidden="true"
+              >
+                <path
+                  d="M16.5 10a6.5 6.5 0 1 1-1.6-4.27M16.5 3.5v3.2h-3.2"
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
             </button>
           </div>
         </header>
@@ -341,7 +379,22 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             </div>
           )}
 
-          {children}
+          {hasRouteAccess ? (
+            children
+          ) : (
+            <section className="admin-card" style={{ maxWidth: 520 }}>
+              <span className="section-eyebrow">Permission Required</span>
+              <h2 className="admin-card-title">Access Restricted</h2>
+              <p className="modal-sub">
+                Your assigned role does not include permission to manage{" "}
+                <strong>{pageTitle}</strong>. Contact an administrator if you need
+                access.
+              </p>
+              <Link href="/admin" className="btn btn-primary btn-sm">
+                Return to Dashboard
+              </Link>
+            </section>
+          )}
         </main>
       </div>
     </div>

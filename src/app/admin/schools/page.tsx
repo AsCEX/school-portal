@@ -57,7 +57,7 @@ export default function AdminSchoolsPage() {
   } = useAdmin();
 
   const [search, setSearch] = useState("");
-  const [density, setDensity] = useState<RowDensity>("medium");
+  const [density, setDensity] = useState<RowDensity>("short");
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<SchoolInfo | null>(null);
   const [form, setForm] = useState<SchoolFormState>(EMPTY_FORM);
@@ -330,7 +330,7 @@ export default function AdminSchoolsPage() {
                   <td colSpan={8}>
                     <button
                       type="button"
-                      className="at-add-btn"
+                      className="at-add-row-btn"
                       onClick={openCreate}
                     >
                       + Add school

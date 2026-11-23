@@ -27,7 +27,7 @@ export default function AdminEventsPage() {
 
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("all");
-  const [density, setDensity] = useState<RowDensity>("medium");
+  const [density, setDensity] = useState<RowDensity>("short");
   const [sortBy, setSortBy] = useState<string>("event_date");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
 

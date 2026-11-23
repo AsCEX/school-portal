@@ -6,12 +6,6 @@ import type { AuthUser } from "@/types/portal";
 
 export type PortalRolePreset = "student" | "parent" | "faculty";
 
-const ROLE_EMAILS: Record<PortalRolePreset, string> = {
-  student: "student@alnavarroces.edu.ph",
-  parent: "parent@alnavarroces.edu.ph",
-  faculty: "faculty@alnavarroces.edu.ph",
-};
-
 interface LoginModalProps {
   open: boolean;
   initialRole?: PortalRolePreset;
@@ -26,16 +20,16 @@ export function LoginModal({
   onAuthenticated,
 }: LoginModalProps) {
   const [role, setRole] = useState<PortalRolePreset>(initialRole);
-  const [email, setEmail] = useState(ROLE_EMAILS[initialRole]);
-  const [password, setPassword] = useState("password");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (open) {
       setRole(initialRole);
-      setEmail(ROLE_EMAILS[initialRole]);
-      setPassword("password");
+      setEmail("");
+      setPassword("");
       setError(null);
     }
   }, [open, initialRole]);
@@ -44,8 +38,6 @@ export function LoginModal({
 
   const handleRolePick = (nextRole: PortalRolePreset) => {
     setRole(nextRole);
-    setEmail(ROLE_EMAILS[nextRole]);
-    setPassword("password");
     setError(null);
   };
 
@@ -55,7 +47,7 @@ export function LoginModal({
     setError(null);
 
     try {
-      const { user } = await loginUser(email, password, "portal");
+      const { user } = await loginUser(email.trim(), password, "portal");
       onAuthenticated(user);
       onClose();
     } catch (err) {
@@ -98,10 +90,10 @@ export function LoginModal({
 
         <span className="section-eyebrow">School Portal Access</span>
         <h3 className="modal-heading" id="login-modal-title">
-          ALNAVARROCES Portal Sign In
+          School Portal Sign In
         </h3>
         <p className="modal-sub">
-          Sign in with your learner, parent, or teacher portal account.
+          Sign in with your assigned learner, parent, or employee portal account.
         </p>
 
         <div
@@ -129,7 +121,8 @@ export function LoginModal({
             <input
               id="login-email"
               type="email"
-              autoComplete="email"
+              autoComplete="username"
+              placeholder="name@school.edu.ph"
               className="form-input"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -145,6 +138,7 @@ export function LoginModal({
               id="login-password"
               type="password"
               autoComplete="current-password"
+              placeholder="Enter your password"
               className="form-input"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -159,13 +153,9 @@ export function LoginModal({
             className="btn btn-primary btn-block"
             disabled={submitting}
           >
-            {submitting ? "Signing In..." : "Sign In to Portal"}
+            {submitting ? "Signing In…" : "Sign In to Portal"}
           </button>
         </form>
-
-        <div className="demo-hint">
-          Demo accounts use password <code>password</code>.
-        </div>
       </div>
     </div>
   );

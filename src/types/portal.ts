@@ -1,3 +1,58 @@
+export type AdminPermission =
+  | "manage_schools"
+  | "manage_announcements"
+  | "manage_events"
+  | "manage_statistics"
+  | "manage_employees"
+  | "manage_accounts";
+
+export const ALL_ADMIN_PERMISSIONS: ReadonlyArray<{
+  key: AdminPermission;
+  label: string;
+  description: string;
+}> = [
+  {
+    key: "manage_schools",
+    label: "Schools & Profiles",
+    description: "Edit school details, hero settings, theme colors, and contact info",
+  },
+  {
+    key: "manage_announcements",
+    label: "Announcements",
+    description: "Create, publish, pin, edit, and delete school announcements",
+  },
+  {
+    key: "manage_events",
+    label: "Upcoming Events",
+    description: "Schedule, update, and remove campus calendar events",
+  },
+  {
+    key: "manage_statistics",
+    label: "School Statistics",
+    description: "Manage published school counters and enrollment metrics",
+  },
+  {
+    key: "manage_employees",
+    label: "Employee Profiles",
+    description: "Add, edit, and remove teaching and non-teaching directory records",
+  },
+  {
+    key: "manage_accounts",
+    label: "Employee Logins & Roles",
+    description: "Assign employee login credentials, roles, and permissions",
+  },
+];
+
+export interface EmployeeAccount {
+  user_id: number;
+  employee_id: number;
+  email: string;
+  role: "admin" | "faculty" | "student" | "parent";
+  permissions: AdminPermission[];
+  school_id: number | null;
+  is_active: boolean;
+}
+
 export interface SchoolInfo {
   id: number;
   slug: string;
@@ -76,6 +131,7 @@ export interface Employee {
   education: string;
   summary: string;
   bio: string;
+  account?: EmployeeAccount | null;
 }
 
 export interface PortalOverview {
@@ -93,6 +149,9 @@ export interface AuthUser {
   email: string;
   role: "admin" | "faculty" | "student" | "parent";
   school_id?: number | null;
+  employee_id?: number | null;
+  permissions: AdminPermission[];
+  is_active?: boolean;
   can_manage_portal: boolean;
   is_super_admin?: boolean;
 }

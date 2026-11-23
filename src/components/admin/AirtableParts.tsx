@@ -85,6 +85,12 @@ export function GridViewBadge({ label = "Grid view" }: { label?: string }) {
   );
 }
 
+const DENSITY_LABELS: Record<RowDensity, string> = {
+  short: "Small",
+  medium: "Medium",
+  tall: "Tall",
+};
+
 export function DensityToggle({
   density,
   onChange,
@@ -101,9 +107,9 @@ export function DensityToggle({
           className={`at-density-btn ${density === mode ? "active" : ""}`}
           aria-pressed={density === mode}
           onClick={() => onChange(mode)}
-          title={`Row height: ${mode}`}
+          title={`Row height: ${DENSITY_LABELS[mode]}`}
         >
-          {mode.charAt(0).toUpperCase() + mode.slice(1)}
+          {DENSITY_LABELS[mode]}
         </button>
       ))}
     </div>

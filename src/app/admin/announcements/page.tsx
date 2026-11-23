@@ -31,7 +31,7 @@ export default function AdminAnnouncementsPage() {
 
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("all");
-  const [density, setDensity] = useState<RowDensity>("medium");
+  const [density, setDensity] = useState<RowDensity>("short");
   const [sortBy, setSortBy] = useState<string>("published_at");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 

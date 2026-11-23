@@ -24,6 +24,17 @@ const STAT_ICONS = new Set([
 ]);
 
 const EMPLOYEE_ROLES = new Set(["Teaching", "Non-Teaching"]);
+const USER_ROLES = new Set(["admin", "faculty", "student", "parent"]);
+const VALID_PERMISSIONS = [
+  "manage_schools",
+  "manage_announcements",
+  "manage_events",
+  "manage_statistics",
+  "manage_employees",
+  "manage_accounts",
+] as const;
+type AdminPermission = (typeof VALID_PERMISSIONS)[number];
+const VALID_PERMISSION_SET = new Set<string>(VALID_PERMISSIONS);
 
 const MONTH_ABBR = [
   "JAN",
@@ -59,6 +70,9 @@ interface UserRow {
   email: string;
   role: "admin" | "faculty" | "student" | "parent";
   school_id: number | null;
+  employee_id: number | null;
+  permissions: string | null;
+  is_active: number | boolean;
   password_hash: string;
 }
 
@@ -68,8 +82,21 @@ interface AuthenticatedUser {
   email: string;
   role: "admin" | "faculty" | "student" | "parent";
   school_id: number | null;
+  employee_id: number | null;
+  permissions: AdminPermission[];
+  is_active: boolean;
   can_manage_portal: boolean;
   is_super_admin: boolean;
+}
+
+interface EmployeeAccountInfo {
+  user_id: number;
+  employee_id: number;
+  email: string;
+  role: "admin" | "faculty" | "student" | "parent";
+  permissions: AdminPermission[];
+  school_id: number | null;
+  is_active: boolean;
 }
 
 interface SchoolRow {
@@ -148,6 +175,12 @@ interface EmployeeRow {
   education: string;
   summary: string;
   bio: string;
+  account_user_id?: number | null;
+  account_email?: string | null;
+  account_role?: string | null;
+  account_permissions?: string | null;
+  account_school_id?: number | null;
+  account_is_active?: number | boolean | null;
 }
 
 type ValidationErrors = Record<string, string[]>;
@@ -334,8 +367,40 @@ function serializeStat(row: StatRow | Record<string, unknown>) {
   };
 }
 
-function serializeEmployee(row: EmployeeRow | Record<string, unknown>) {
-  return {
+function parsePermissions(
+  raw: unknown,
+  role: "admin" | "faculty" | "student" | "parent"
+): AdminPermission[] {
+  if (role === "admin") {
+    return [...VALID_PERMISSIONS];
+  }
+  let list: unknown[] = [];
+  if (Array.isArray(raw)) {
+    list = raw;
+  } else if (typeof raw === "string" && raw.trim().length > 0) {
+    try {
+      const parsed: unknown = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        list = parsed;
+      }
+    } catch {
+      list = [];
+    }
+  }
+  const unique = new Set<AdminPermission>();
+  for (const item of list) {
+    if (typeof item === "string" && VALID_PERMISSION_SET.has(item)) {
+      unique.add(item as AdminPermission);
+    }
+  }
+  return Array.from(unique);
+}
+
+function serializeEmployee(
+  row: EmployeeRow | Record<string, unknown>,
+  includeAccount = false
+) {
+  const base = {
     id: Number(row.id),
     school_id: Number(row.school_id ?? 1),
     name: String(row.name ?? ""),
@@ -354,24 +419,79 @@ function serializeEmployee(row: EmployeeRow | Record<string, unknown>) {
     summary: String(row.summary ?? ""),
     bio: String(row.bio ?? ""),
   };
+
+  if (!includeAccount) {
+    return base;
+  }
+
+  const accountUserId =
+    row.account_user_id === null || row.account_user_id === undefined
+      ? null
+      : Number(row.account_user_id);
+
+  let account: EmployeeAccountInfo | null = null;
+  if (accountUserId) {
+    const accountRole = (
+      USER_ROLES.has(String(row.account_role))
+        ? String(row.account_role)
+        : "faculty"
+    ) as "admin" | "faculty" | "student" | "parent";
+    account = {
+      user_id: accountUserId,
+      employee_id: base.id,
+      email: String(row.account_email ?? ""),
+      role: accountRole,
+      permissions: parsePermissions(row.account_permissions, accountRole),
+      school_id:
+        row.account_school_id === null || row.account_school_id === undefined
+          ? null
+          : Number(row.account_school_id),
+      is_active:
+        row.account_is_active === undefined ? true : Boolean(row.account_is_active),
+    };
+  }
+
+  return { ...base, account };
 }
 
 function serializeUser(
-  row: Pick<UserRow, "id" | "name" | "email" | "role" | "school_id">
+  row: Pick<
+    UserRow,
+    "id" | "name" | "email" | "role" | "school_id" | "employee_id" | "permissions" | "is_active"
+  >
 ): AuthenticatedUser {
   const schoolId =
     row.school_id === null || row.school_id === undefined
       ? null
       : Number(row.school_id);
+  const employeeId =
+    row.employee_id === null || row.employee_id === undefined
+      ? null
+      : Number(row.employee_id);
+  const isActive = row.is_active === undefined ? true : Boolean(row.is_active);
+  const permissions = parsePermissions(row.permissions, row.role);
   return {
     id: Number(row.id),
     name: row.name,
     email: row.email,
     role: row.role,
     school_id: schoolId,
-    can_manage_portal: row.role === "admin" || row.role === "faculty",
-    is_super_admin: row.role === "admin" && schoolId === null,
+    employee_id: employeeId,
+    permissions,
+    is_active: isActive,
+    can_manage_portal:
+      isActive && (row.role === "admin" || permissions.length > 0),
+    is_super_admin: isActive && row.role === "admin" && schoolId === null,
   };
+}
+
+function hasPermission(
+  user: AuthenticatedUser,
+  permission: AdminPermission
+): boolean {
+  if (!user.is_active) return false;
+  if (user.role === "admin") return true;
+  return user.permissions.includes(permission);
 }
 
 function canManageSchool(user: AuthenticatedUser, schoolId: number): boolean {
@@ -416,6 +536,32 @@ async function sha256Hex(input: string): Promise<string> {
   const encoded = new TextEncoder().encode(input);
   const digest = await crypto.subtle.digest("SHA-256", encoded);
   return bytesToHex(new Uint8Array(digest));
+}
+
+async function hashPassword(password: string): Promise<string> {
+  const iterations = 100000;
+  const salt = new Uint8Array(16);
+  crypto.getRandomValues(salt);
+  const keyMaterial = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(password),
+    "PBKDF2",
+    false,
+    ["deriveBits"]
+  );
+  const derivedBits = await crypto.subtle.deriveBits(
+    {
+      name: "PBKDF2",
+      salt: salt as BufferSource,
+      iterations,
+      hash: "SHA-256",
+    },
+    keyMaterial,
+    256
+  );
+  return `pbkdf2_sha256$${iterations}$${bytesToHex(salt)}$${bytesToHex(
+    new Uint8Array(derivedBits)
+  )}`;
 }
 
 async function verifyPassword(
@@ -492,7 +638,10 @@ async function authenticateRequest(
        u.name AS name,
        u.email AS email,
        u.role AS role,
-       u.school_id AS school_id
+       u.school_id AS school_id,
+       u.employee_id AS employee_id,
+       u.permissions AS permissions,
+       u.is_active AS is_active
      FROM auth_tokens t
      INNER JOIN users u ON u.id = t.user_id
      WHERE t.token_hash = ?
@@ -507,11 +656,14 @@ async function authenticateRequest(
       email: string;
       role: "admin" | "faculty" | "student" | "parent";
       school_id: number | null;
+      employee_id: number | null;
+      permissions: string | null;
+      is_active: number | boolean;
     }>();
 
   if (!row) return null;
 
-  if (row.expires_at && row.expires_at < nowIso) {
+  if (!row.is_active || (row.expires_at && row.expires_at < nowIso)) {
     ctx.waitUntil(
       env.DB.prepare("DELETE FROM auth_tokens WHERE id = ?")
         .bind(row.token_id)
@@ -749,6 +901,9 @@ async function handlePortalOverview(
 ): Promise<Response> {
   const auth = await authenticateRequest(request, env, ctx);
   const allowInactive = Boolean(auth?.user.can_manage_portal);
+  const includeAccounts = Boolean(
+    auth && hasPermission(auth.user, "manage_accounts")
+  );
 
   const school = await resolveSchool(request, env, url, { allowInactive });
   if (!school) {
@@ -757,6 +912,25 @@ async function handlePortalOverview(
 
   const schoolId = Number(school.id);
   const schoolsWhere = allowInactive ? "" : "WHERE is_active = 1";
+  const employeesStmt = includeAccounts
+    ? env.DB.prepare(
+        `SELECT e.id, e.school_id, e.name, e.role_type, e.title, e.department, e.photo_url,
+                e.years_of_service, e.email, e.office, e.office_hours, e.education, e.summary, e.bio,
+                u.id AS account_user_id, u.email AS account_email, u.role AS account_role,
+                u.permissions AS account_permissions, u.school_id AS account_school_id,
+                u.is_active AS account_is_active
+         FROM employees e
+         LEFT JOIN users u ON u.employee_id = e.id
+         WHERE e.school_id = ?
+         ORDER BY CASE WHEN e.role_type = 'Teaching' THEN 0 ELSE 1 END, e.id ASC`
+      ).bind(schoolId)
+    : env.DB.prepare(
+        `SELECT id, school_id, name, role_type, title, department, photo_url, years_of_service,
+                email, office, office_hours, education, summary, bio
+         FROM employees
+         WHERE school_id = ?
+         ORDER BY CASE WHEN role_type = 'Teaching' THEN 0 ELSE 1 END, id ASC`
+      ).bind(schoolId);
 
   const [schoolsRes, announcementsRes, eventsRes, statsRes, employeesRes] =
     await env.DB.batch([
@@ -784,13 +958,7 @@ async function handlePortalOverview(
          WHERE school_id = ?
          ORDER BY sort_order ASC, id ASC`
       ).bind(schoolId),
-      env.DB.prepare(
-        `SELECT id, school_id, name, role_type, title, department, photo_url, years_of_service,
-                email, office, office_hours, education, summary, bio
-         FROM employees
-         WHERE school_id = ?
-         ORDER BY CASE WHEN role_type = 'Teaching' THEN 0 ELSE 1 END, id ASC`
-      ).bind(schoolId),
+      employeesStmt,
     ]);
 
   return jsonResponse(request, {
@@ -799,7 +967,9 @@ async function handlePortalOverview(
     announcements: announcementsRes.results.map(serializeAnnouncement),
     events: eventsRes.results.map(serializeEvent),
     statistics: statsRes.results.map(serializeStat),
-    employees: employeesRes.results.map(serializeEmployee),
+    employees: employeesRes.results.map((row) =>
+      serializeEmployee(row, includeAccounts)
+    ),
   });
 }
 
@@ -855,10 +1025,10 @@ async function handleSchools(
 
   const auth = await authenticateRequest(request, env, ctx);
   if (!auth) return jsonResponse(request, { message: "Unauthenticated." }, 401);
-  if (!auth.user.can_manage_portal) {
+  if (!hasPermission(auth.user, "manage_schools")) {
     return jsonResponse(
       request,
-      { message: "Forbidden. Administrator or faculty role required." },
+      { message: "Forbidden. School management permission required." },
       403
     );
   }
@@ -1395,7 +1565,10 @@ async function handleLogin(
   }
 
   const user = await env.DB.prepare(
-    "SELECT id, name, email, role, school_id, password_hash FROM users WHERE lower(email) = lower(?) LIMIT 1"
+    `SELECT id, name, email, role, school_id, employee_id, permissions, is_active, password_hash
+     FROM users
+     WHERE lower(email) = lower(?)
+     LIMIT 1`
   )
     .bind(email)
     .first<UserRow>();
@@ -1405,6 +1578,14 @@ async function handleLogin(
       request,
       { message: "Invalid email or password." },
       422
+    );
+  }
+
+  if (!user.is_active) {
+    return jsonResponse(
+      request,
+      { message: "This account has been disabled. Contact an administrator." },
+      403
     );
   }
 
@@ -1482,10 +1663,10 @@ async function handleAnnouncements(
 
   const auth = await authenticateRequest(request, env, ctx);
   if (!auth) return jsonResponse(request, { message: "Unauthenticated." }, 401);
-  if (!auth.user.can_manage_portal) {
+  if (!hasPermission(auth.user, "manage_announcements")) {
     return jsonResponse(
       request,
-      { message: "Forbidden. Administrator or faculty role required." },
+      { message: "Forbidden. Announcement management permission required." },
       403
     );
   }
@@ -1712,10 +1893,10 @@ async function handleEvents(
 
   const auth = await authenticateRequest(request, env, ctx);
   if (!auth) return jsonResponse(request, { message: "Unauthenticated." }, 401);
-  if (!auth.user.can_manage_portal) {
+  if (!hasPermission(auth.user, "manage_events")) {
     return jsonResponse(
       request,
-      { message: "Forbidden. Administrator or faculty role required." },
+      { message: "Forbidden. Event management permission required." },
       403
     );
   }
@@ -1903,10 +2084,10 @@ async function handleStatistics(
 
   const auth = await authenticateRequest(request, env, ctx);
   if (!auth) return jsonResponse(request, { message: "Unauthenticated." }, 401);
-  if (!auth.user.can_manage_portal) {
+  if (!hasPermission(auth.user, "manage_statistics")) {
     return jsonResponse(
       request,
-      { message: "Forbidden. Administrator or faculty role required." },
+      { message: "Forbidden. Statistics management permission required." },
       403
     );
   }
@@ -2155,7 +2336,7 @@ async function handleEmployees(
       .all<EmployeeRow>();
 
     return jsonResponse(request, {
-      data: result.results.map(serializeEmployee),
+      data: result.results.map((row) => serializeEmployee(row)),
     });
   }
 
@@ -2176,10 +2357,10 @@ async function handleEmployees(
 
   const auth = await authenticateRequest(request, env, ctx);
   if (!auth) return jsonResponse(request, { message: "Unauthenticated." }, 401);
-  if (!auth.user.can_manage_portal) {
+  if (!hasPermission(auth.user, "manage_employees")) {
     return jsonResponse(
       request,
-      { message: "Forbidden. Administrator or faculty role required." },
+      { message: "Forbidden. Employee management permission required." },
       403
     );
   }
@@ -2453,11 +2634,260 @@ async function handleEmployees(
       );
     }
 
-    await env.DB.prepare("DELETE FROM employees WHERE id = ?").bind(id).run();
+    await env.DB.batch([
+      env.DB.prepare("DELETE FROM users WHERE employee_id = ?").bind(id),
+      env.DB.prepare("DELETE FROM employees WHERE id = ?").bind(id),
+    ]);
     return jsonResponse(request, { message: "Employee profile deleted." });
   }
 
   return jsonResponse(request, { message: "Method not allowed." }, 405);
+}
+
+async function handleEmployeeAccount(
+  request: Request,
+  env: WorkerEnv,
+  ctx: WorkerExecutionContext,
+  idParam: string
+): Promise<Response> {
+  const auth = await authenticateRequest(request, env, ctx);
+  if (!auth) return jsonResponse(request, { message: "Unauthenticated." }, 401);
+  if (!hasPermission(auth.user, "manage_accounts")) {
+    return jsonResponse(
+      request,
+      { message: "Forbidden. Account & role management permission required." },
+      403
+    );
+  }
+
+  const employeeId = parsePositiveId(idParam);
+  if (!employeeId) {
+    return jsonResponse(request, { message: "Employee not found." }, 404);
+  }
+
+  const employee = await env.DB.prepare(
+    "SELECT id, school_id, name, email FROM employees WHERE id = ? LIMIT 1"
+  )
+    .bind(employeeId)
+    .first<{ id: number; school_id: number; name: string; email: string }>();
+
+  if (!employee) {
+    return jsonResponse(request, { message: "Employee not found." }, 404);
+  }
+
+  if (!canManageSchool(auth.user, Number(employee.school_id))) {
+    return jsonResponse(
+      request,
+      { message: "Forbidden. You do not have permission to manage accounts for this school." },
+      403
+    );
+  }
+
+  const existingUser = await env.DB.prepare(
+    `SELECT id, name, email, role, school_id, employee_id, permissions, is_active
+     FROM users
+     WHERE employee_id = ?
+     LIMIT 1`
+  )
+    .bind(employeeId)
+    .first<Omit<UserRow, "password_hash">>();
+
+  if (request.method === "DELETE") {
+    if (!existingUser) {
+      return jsonResponse(request, { message: "No login account assigned to this employee." }, 404);
+    }
+    if (Number(existingUser.id) === auth.user.id) {
+      return jsonResponse(
+        request,
+        { message: "You cannot revoke your own active login account." },
+        422
+      );
+    }
+    await env.DB.batch([
+      env.DB.prepare("DELETE FROM auth_tokens WHERE user_id = ?").bind(existingUser.id),
+      env.DB.prepare("DELETE FROM users WHERE id = ?").bind(existingUser.id),
+    ]);
+    return jsonResponse(request, { message: "Employee login revoked." });
+  }
+
+  if (request.method !== "PUT" && request.method !== "POST") {
+    return jsonResponse(request, { message: "Method not allowed." }, 405);
+  }
+
+  const body = await readJsonBody(request);
+  if (!body) {
+    return validationErrorResponse(request, { email: ["Invalid JSON request body."] });
+  }
+
+  const errors: ValidationErrors = {};
+  const email = validateStringField(
+    body,
+    "email",
+    { required: true, email: true, max: 255 },
+    errors
+  );
+  const role = validateStringField(
+    body,
+    "role",
+    { required: true, allowed: USER_ROLES },
+    errors
+  ) as "admin" | "faculty" | "student" | "parent" | undefined;
+
+  if (role === "admin" && auth.user.role !== "admin") {
+    return jsonResponse(
+      request,
+      { message: "Forbidden. Only administrators can assign the admin role." },
+      403
+    );
+  }
+
+  const rawPassword =
+    typeof body.password === "string" ? body.password : "";
+  if (!existingUser && rawPassword.length === 0) {
+    addError(errors, "password", "A password (at least 8 characters) is required for a new login.");
+  } else if (rawPassword.length > 0 && rawPassword.length < 8) {
+    addError(errors, "password", "The password must be at least 8 characters.");
+  }
+
+  let isActive = true;
+  if (body.is_active !== undefined) {
+    if (typeof body.is_active !== "boolean") {
+      addError(errors, "is_active", "The is active field must be true or false.");
+    } else {
+      isActive = body.is_active;
+    }
+  }
+
+  if (existingUser && Number(existingUser.id) === auth.user.id && !isActive) {
+    addError(errors, "is_active", "You cannot disable your own active account.");
+  }
+
+  let permissions: AdminPermission[] = [];
+  if (role === "admin") {
+    permissions = [...VALID_PERMISSIONS];
+  } else if (body.permissions !== undefined) {
+    if (!Array.isArray(body.permissions)) {
+      addError(errors, "permissions", "The permissions field must be a list.");
+    } else {
+      for (const p of body.permissions) {
+        if (typeof p !== "string" || !VALID_PERMISSION_SET.has(p)) {
+          addError(errors, "permissions", `Unknown permission: ${String(p)}`);
+        } else {
+          permissions.push(p as AdminPermission);
+        }
+      }
+      permissions = Array.from(new Set(permissions));
+    }
+  } else if (existingUser) {
+    permissions = parsePermissions(existingUser.permissions, role ?? existingUser.role);
+  }
+
+  if (email && Object.keys(errors).length === 0) {
+    const dup = existingUser
+      ? await env.DB.prepare(
+          "SELECT id FROM users WHERE lower(email) = lower(?) AND id != ? LIMIT 1"
+        )
+          .bind(email, existingUser.id)
+          .first<{ id: number }>()
+      : await env.DB.prepare(
+          "SELECT id FROM users WHERE lower(email) = lower(?) LIMIT 1"
+        )
+          .bind(email)
+          .first<{ id: number }>();
+
+    if (dup) {
+      addError(errors, "email", "This login email is already in use by another account.");
+    }
+  }
+
+  if (Object.keys(errors).length > 0 || !email || !role) {
+    return validationErrorResponse(request, errors);
+  }
+
+  const grantAllSchools =
+    auth.user.is_super_admin && role === "admin" && body.all_schools === true;
+  const assignedSchoolId = grantAllSchools ? null : Number(employee.school_id);
+  const permissionsJson = JSON.stringify(permissions);
+
+  let userId: number;
+  if (existingUser) {
+    userId = Number(existingUser.id);
+    if (rawPassword.length > 0) {
+      const nextHash = await hashPassword(rawPassword);
+      await env.DB.prepare(
+        `UPDATE users
+         SET name = ?, email = ?, role = ?, school_id = ?, permissions = ?, is_active = ?,
+             password_hash = ?, updated_at = datetime('now')
+         WHERE id = ?`
+      )
+        .bind(
+          employee.name,
+          email,
+          role,
+          assignedSchoolId,
+          permissionsJson,
+          isActive ? 1 : 0,
+          nextHash,
+          userId
+        )
+        .run();
+      await env.DB.prepare("DELETE FROM auth_tokens WHERE user_id = ?")
+        .bind(userId)
+        .run();
+    } else {
+      await env.DB.prepare(
+        `UPDATE users
+         SET name = ?, email = ?, role = ?, school_id = ?, permissions = ?, is_active = ?,
+             updated_at = datetime('now')
+         WHERE id = ?`
+      )
+        .bind(
+          employee.name,
+          email,
+          role,
+          assignedSchoolId,
+          permissionsJson,
+          isActive ? 1 : 0,
+          userId
+        )
+        .run();
+      if (!isActive) {
+        await env.DB.prepare("DELETE FROM auth_tokens WHERE user_id = ?")
+          .bind(userId)
+          .run();
+      }
+    }
+  } else {
+    const passwordHash = await hashPassword(rawPassword);
+    const insert = await env.DB.prepare(
+      `INSERT INTO users (name, email, role, school_id, employee_id, permissions, is_active, password_hash)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+    )
+      .bind(
+        employee.name,
+        email,
+        role,
+        assignedSchoolId,
+        employeeId,
+        permissionsJson,
+        isActive ? 1 : 0,
+        passwordHash
+      )
+      .run();
+    userId = Number(insert.meta.last_row_id);
+  }
+
+  const account: EmployeeAccountInfo = {
+    user_id: userId,
+    employee_id: employeeId,
+    email,
+    role,
+    permissions,
+    school_id: assignedSchoolId,
+    is_active: isActive,
+  };
+
+  return jsonResponse(request, { data: account }, existingUser ? 200 : 201);
 }
 
 async function routeApiRequest(
@@ -2533,6 +2963,10 @@ async function routeApiRequest(
 
   if (segments[0] === "statistics" && segments.length <= 2) {
     return handleStatistics(request, env, ctx, segments[1] ?? null, url);
+  }
+
+  if (segments[0] === "employees" && segments.length === 3 && segments[2] === "account") {
+    return handleEmployeeAccount(request, env, ctx, segments[1]);
   }
 
   if (segments[0] === "employees" && segments.length <= 2) {
