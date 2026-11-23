@@ -513,16 +513,16 @@ button:focus-visible {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: center 40%;
+  object-position: center 68%;
 }
 
 .hero-overlay {
   position: absolute;
   inset: 0;
   background: linear-gradient(102deg,
-      rgba(4, 18, 70, 0.92) 0%,
-      rgba(7, 24, 124, 0.8) 54%,
-      rgba(7, 24, 124, 0.42) 100%);
+      rgba(4, 18, 70, 0.86) 0%,
+      rgba(7, 24, 124, 0.62) 48%,
+      rgba(4, 18, 70, 0.18) 100%);
 }
 
 .hero-content {
@@ -541,8 +541,8 @@ button:focus-visible {
   align-items: center;
   gap: 8px;
   padding: 6px 14px;
-  background-color: rgba(255, 255, 255, 0.16);
-  border: 1px solid rgba(255, 255, 255, 0.32);
+  background-color: rgba(4, 18, 70, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.36);
   border-radius: var(--radius-pill);
   font-size: 0.8rem;
   font-weight: 600;
@@ -565,14 +565,16 @@ button:focus-visible {
   line-height: 1.12;
   letter-spacing: -0.02em;
   color: var(--white);
+  text-shadow: 0 2px 14px rgba(4, 18, 70, 0.45);
 }
 
 .hero-lead {
   margin: 0 0 32px;
   font-size: clamp(1rem, 1.4vw, 1.12rem);
   line-height: 1.65;
-  color: rgba(255, 255, 255, 0.92);
+  color: rgba(255, 255, 255, 0.94);
   max-width: 590px;
+  text-shadow: 0 1px 10px rgba(4, 18, 70, 0.4);
 }
 
 .hero-actions {

@@ -8,30 +8,15 @@ import React, {
   useRef,
   useState,
 } from "react";
-import dynamic from "next/dynamic";
-import {
-  clearAuthSession,
-  fetchCurrentUser,
-  fetchPortalOverview,
-  getStoredToken,
-  getStoredUser,
-  logoutUser,
-} from "@/lib/api";
+import { fetchPortalOverview } from "@/lib/api";
 import type {
   Announcement,
-  AuthUser,
   CampusEvent,
   Employee,
   PortalOverview,
   SchoolStat,
 } from "@/types/portal";
 import { SchoolCrest, StatIcon } from "./Icons";
-import type { PortalRolePreset } from "./LoginModal";
-
-const LoginModal = dynamic(
-  () => import("./LoginModal").then((mod) => mod.LoginModal),
-  { ssr: false }
-);
 
 const SAVED_EVENTS_KEY = "alnces_saved_events_v1";
 
@@ -125,11 +110,6 @@ export function PortalClient() {
   const [selectedEvent, setSelectedEvent] = useState<CampusEvent | null>(null);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
 
-  const [authUser, setAuthUser] = useState<AuthUser | null>(null);
-  const [loginOpen, setLoginOpen] = useState(false);
-  const [loginRolePreset, setLoginRolePreset] =
-    useState<PortalRolePreset>("student");
-
   const loadPortalData = useCallback(async () => {
     setLoading(true);
     setApiError(null);
@@ -158,18 +138,6 @@ export function PortalClient() {
       }
     } catch {
       // ignore storage errors
-    }
-
-    // Restore & verify existing Public Portal session (separate from Admin session)
-    const cached = getStoredUser("portal");
-    if (cached) setAuthUser(cached);
-    if (getStoredToken("portal")) {
-      fetchCurrentUser("portal")
-        .then(({ user }) => setAuthUser(user))
-        .catch(() => {
-          clearAuthSession("portal");
-          setAuthUser(null);
-        });
     }
   }, [loadPortalData]);
 
@@ -225,7 +193,6 @@ export function PortalClient() {
         setSelectedAnnouncement(null);
         setSelectedEvent(null);
         setSelectedEmployee(null);
-        setLoginOpen(false);
       }
     };
     window.addEventListener("keydown", onKeyDown);
@@ -243,17 +210,6 @@ export function PortalClient() {
   };
 
   const savedEventSet = useMemo(() => new Set(savedEventIds), [savedEventIds]);
-
-  const handleOpenLogin = (preset: PortalRolePreset) => {
-    setLoginRolePreset(preset);
-    setLoginOpen(true);
-    setMobileMenuOpen(false);
-  };
-
-  const handleLogout = async () => {
-    await logoutUser("portal");
-    setAuthUser(null);
-  };
 
   const announcements = useMemo(() => {
     const items = portal?.announcements ?? [];
@@ -336,23 +292,15 @@ export function PortalClient() {
             <span className="utility-divider" aria-hidden="true">
               |
             </span>
-            <button
-              type="button"
-              className="utility-link utility-btn"
-              onClick={() => handleOpenLogin("parent")}
-            >
-              Parent Portal
-            </button>
+            <a href="#statistics" className="utility-link">
+              School Statistics
+            </a>
             <span className="utility-divider" aria-hidden="true">
               |
             </span>
-            <button
-              type="button"
-              className="utility-link utility-btn"
-              onClick={() => handleOpenLogin("student")}
-            >
-              Student LMS
-            </button>
+            <a href="#directory" className="utility-link">
+              Staff Directory
+            </a>
             <span className="utility-divider" aria-hidden="true">
               |
             </span>
@@ -389,9 +337,8 @@ export function PortalClient() {
               <li>
                 <a
                   href="#announcements"
-                  className={`nav-link ${
-                    activeSection === "announcements" ? "active" : ""
-                  }`}
+                  className={`nav-link ${activeSection === "announcements" ? "active" : ""
+                    }`}
                 >
                   Announcements &amp; Events
                 </a>
@@ -399,9 +346,8 @@ export function PortalClient() {
               <li>
                 <a
                   href="#statistics"
-                  className={`nav-link ${
-                    activeSection === "statistics" ? "active" : ""
-                  }`}
+                  className={`nav-link ${activeSection === "statistics" ? "active" : ""
+                    }`}
                 >
                   Statistics
                 </a>
@@ -409,53 +355,14 @@ export function PortalClient() {
               <li>
                 <a
                   href="#directory"
-                  className={`nav-link ${
-                    activeSection === "directory" ? "active" : ""
-                  }`}
+                  className={`nav-link ${activeSection === "directory" ? "active" : ""
+                    }`}
                 >
                   Faculty &amp; Staff
                 </a>
               </li>
             </ul>
           </nav>
-
-          <div className="header-actions">
-            {authUser ? (
-              <>
-                <span className="user-pill desktop-only">
-                  <span className="user-role-tag">{authUser.role}</span>
-                  <span>{authUser.name}</span>
-                </span>
-                <button
-                  type="button"
-                  className="btn btn-outline btn-sm desktop-only"
-                  onClick={handleLogout}
-                >
-                  Sign Out
-                </button>
-              </>
-            ) : (
-              <button
-                type="button"
-                className="btn btn-primary btn-sm desktop-only"
-                onClick={() => handleOpenLogin("student")}
-              >
-                Portal Sign In
-              </button>
-            )}
-
-            <button
-              type="button"
-              className="mobile-menu-toggle"
-              aria-expanded={mobileMenuOpen}
-              aria-label="Toggle navigation menu"
-              onClick={() => setMobileMenuOpen((v) => !v)}
-            >
-              <span className="hamburger-line" />
-              <span className="hamburger-line" />
-              <span className="hamburger-line" />
-            </button>
-          </div>
         </div>
 
         {mobileMenuOpen && (
@@ -489,25 +396,6 @@ export function PortalClient() {
               >
                 Teaching &amp; Non-Teaching Staff
               </a>
-              <div className="mobile-nav-actions">
-                {authUser ? (
-                  <button
-                    type="button"
-                    className="btn btn-outline btn-block"
-                    onClick={handleLogout}
-                  >
-                    Sign Out ({authUser.name})
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    className="btn btn-primary btn-block"
-                    onClick={() => handleOpenLogin("student")}
-                  >
-                    Portal Sign In
-                  </button>
-                )}
-              </div>
             </div>
           </div>
         )}
@@ -1033,8 +921,8 @@ export function PortalClient() {
               {staffRole === "all"
                 ? "employees"
                 : staffRole === "Teaching"
-                ? "teaching faculty members"
-                : "non-teaching staff members"}
+                  ? "teaching faculty members"
+                  : "non-teaching staff members"}
             </div>
 
             {filteredEmployees.length === 0 ? (
@@ -1067,11 +955,10 @@ export function PortalClient() {
                         loading="lazy"
                       />
                       <span
-                        className={`staff-type-badge ${
-                          emp.role_type === "Teaching"
-                            ? "badge-teaching"
-                            : "badge-nonteaching"
-                        }`}
+                        className={`staff-type-badge ${emp.role_type === "Teaching"
+                          ? "badge-teaching"
+                          : "badge-nonteaching"
+                          }`}
                       >
                         {emp.role_type}
                       </span>
@@ -1114,8 +1001,7 @@ export function PortalClient() {
               </span>
             </a>
             <p className="footer-desc">
-              Official Kindergarten–Grade 6 digital school portal powered by Laravel,
-              MySQL, and Next.js.
+              Official Kindergarten–Grade 6 digital school portal powered by ACZolutions.
             </p>
           </div>
 
@@ -1138,34 +1024,19 @@ export function PortalClient() {
           </div>
 
           <div>
-            <h4 className="footer-heading">Quick Portals</h4>
+            <h4 className="footer-heading">Campus Resources</h4>
             <ul className="footer-links">
               <li>
-                <button
-                  type="button"
-                  className="footer-link-btn"
-                  onClick={() => handleOpenLogin("student")}
-                >
-                  Student Learning Portal
-                </button>
+                <a href="#announcements">Official Announcements</a>
               </li>
               <li>
-                <button
-                  type="button"
-                  className="footer-link-btn"
-                  onClick={() => handleOpenLogin("parent")}
-                >
-                  Parent &amp; Guardian Access
-                </button>
+                <a href="#announcements">Upcoming Campus Events</a>
               </li>
               <li>
-                <button
-                  type="button"
-                  className="footer-link-btn"
-                  onClick={() => handleOpenLogin("faculty")}
-                >
-                  Teacher &amp; Staff Sign In
-                </button>
+                <a href="#statistics">Annual School Statistics</a>
+              </li>
+              <li>
+                <a href="#directory">Teaching &amp; Non-Teaching Staff</a>
               </li>
             </ul>
           </div>
@@ -1369,11 +1240,10 @@ export function PortalClient() {
               />
               <div>
                 <span
-                  className={`tag ${
-                    selectedEmployee.role_type === "Teaching"
-                      ? "tag-solid"
-                      : "tag-outline"
-                  }`}
+                  className={`tag ${selectedEmployee.role_type === "Teaching"
+                    ? "tag-solid"
+                    : "tag-outline"
+                    }`}
                 >
                   {selectedEmployee.role_type} Staff
                 </span>
@@ -1446,16 +1316,6 @@ export function PortalClient() {
             </div>
           </div>
         </div>
-      )}
-
-      {/* Portal Sign In Modal (lazy-loaded on demand) */}
-      {loginOpen && (
-        <LoginModal
-          open={loginOpen}
-          initialRole={loginRolePreset}
-          onClose={() => setLoginOpen(false)}
-          onAuthenticated={(user) => setAuthUser(user)}
-        />
       )}
     </>
   );
